@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arjuna's Dilemma: The Path of Dharma - Interactive Experience</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Earthy Harmony -->
+    <!-- Application Structure Plan: The SPA is structured to transform the static game design document into an interactive demonstration. It begins with a hero section introducing the game concept. This is followed by an overview of the core mechanics, using interactive cards to explain the four key character stats. The centerpiece is an an interactive simulation of the game's first major choice, where the user, as Arjuna, selects a dialogue option and immediately sees the narrative and statistical consequences visualized in a dynamic bar chart. This directly engages the user in the core gameplay loop. The game then progresses through 10 distinct dilemmas, each building on the previous one, with the background color dynamically adjusting to reflect Arjuna's cumulative internal state. A unique background image is loaded for each dilemma to enhance immersion. Finally, a dedicated section reveals the player's cumulative rating and its societal impact, along with the three possible endings. This sequential, feedback-driven structure was chosen to make the abstract game mechanics tangible, guide the user through a simulated narrative progression, and provide a clear, impactful summary of their journey's outcome. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Core Game Stats (Dharma, Equanimity, etc.) -> Goal: Inform -> Viz/Presentation: 2x2 grid of cards with Unicode icons -> Interaction: Subtle hover effect -> Justification: Provides a clear, organized, and visually appealing introduction to the game's key metrics before the user needs to apply them.
+        - Report Info: Each of the 10 Dilemmas & Consequences -> Goal: Demonstrate Core Loop & Progression -> Viz/Presentation: Interactive dialogue UI with clickable buttons, paired with a dynamically updated horizontal bar chart showing cumulative stats. -> Interaction: User clicks a choice, which triggers a JS function to update the narrative feedback, redraw the chart with new cumulative data, and update the background color. A 'Next Dilemma' button advances the game. A unique background image is loaded for each dilemma. -> Justification: This is the most effective way to communicate the cause-and-effect nature of the game in a progressive manner. The dialogue UI creates an immersive experience, while the Chart.js bar chart gives immediate, clear quantitative feedback on the impact of each decision on the overall state. Library/Method: Vanilla JS, Chart.js.
+        - Report Info: Game Endings & Final Rating -> Goal: Summarize & Conclude -> Viz/Presentation: Dedicated section with a final numerical rating and descriptive text. -> Interaction: None, it's the final display. -> Justification: Provides a clear, impactful conclusion to the interactive experience, directly linking player choices to a final outcome and its societal implications.
+        - Report Info: Overall Game State -> Goal: Provide Ambient Feedback -> Viz/Presentation: Dynamic background color change. -> Interaction: Passive, visual feedback. -> Justification: Enhances immersion by visually representing the cumulative 'goodness' or 'difficulty' of Arjuna's journey based on player choices.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: hsl(30, 20%, 80%); /* Initial neutral background color */
+            color: #3D352E;
+            transition: background-color 0.8s ease-in-out;
+            background-size: cover; /* Ensures the image covers the entire background */
+            background-position: center; /* Centers the background image */
+            background-repeat: no-repeat; /* Prevents image repetition */
+            background-attachment: fixed; /* Keeps background fixed during scroll */
+        }
+        .bg-accent { background-color: #D4B996; }
+        .text-accent { color: #D4B996; }
+        .border-accent { border-color: #D4B996; }
+        .bg-primary { background-color: #FDFBF8; }
+        .bg-secondary { background-color: #F5EFE6; }
+        .text-primary { color: #3D352E; }
+        .text-secondary { color: #6A5F53; }
+        .btn {
+            transition: all 0.3s ease;
+            transform: translateY(0);
+        }
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .card {
+            transition: all 0.3s ease;
+            border: 1px solid #EAE0D5;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            border-color: #D4B996;
+        }
+        .tab-active {
+            border-bottom: 2px solid #D4B996;
+            color: #3D352E;
+        }
+        .tab-inactive {
+            border-bottom: 2px solid transparent;
+            color: #6A5F53;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 250px;
+            max-height: 300px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 300px;
+                max-height: 350px;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <main class="container mx-auto px-4 py-8 md:py-16">
+        
+        <!-- Header Section -->
+        <header class="text-center mb-16">
+            <h1 class="text-4xl md:text-6xl font-bold text-primary mb-2">Arjuna's Dilemma</h1>
+            <h2 class="text-xl md:text-2xl font-semibold text-accent">The Path of Dharma</h2>
+            <p class="mt-4 text-lg text-secondary max-w-3xl mx-auto">An interactive exploration of a game concept based on the Bhagavad Gita, where every choice shapes your journey toward self-realization and impacts society.</p>
+        </header>
+
+        <!-- Core Mechanics Section -->
+        <section id="mechanics" class="mb-16">
+            <h3 class="text-3xl font-bold text-center mb-4">Core Mechanics</h3>
+            <p class="text-center text-secondary mb-10 max-w-2xl mx-auto">The gameplay revolves around balancing four key internal states. Your choices in dialogue with Krishna will directly influence these meters, guiding your path.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div class="card bg-secondary p-6 rounded-lg text-center">
+                    <div class="text-4xl mb-3">⚖️</div>
+                    <h4 class="text-xl font-bold mb-2">Dharma</h4>
+                    <p class="text-secondary text-sm">Alignment with righteous duty and universal moral order. Dereliction of your duty will cause this to fall.</p>
+                </div>
+                <div class="card bg-secondary p-6 rounded-lg text-center">
+                    <div class="text-4xl mb-3">🧘</div>
+                    <h4 class="text-xl font-bold mb-2">Equanimity</h4>
+                    <p class="text-secondary text-sm">Mental steadiness and inner peace. Rises as you detach from emotional turmoil and the fruits of your actions.</p>
+                </div>
+                <div class="card bg-secondary p-6 rounded-lg text-center">
+                    <div class="text-4xl mb-3">💡</div>
+                    <h4 class="text-xl font-bold mb-2">Clarity</h4>
+                    <p class="text-secondary text-sm">Understanding of the self and philosophical truth. Grows as you grasp the wisdom shared by Krishna.</p>
+                </div >
+                <div class="card bg-secondary p-6 rounded-lg text-center">
+                    <div class="text-4xl mb-3">🌪️</div>
+                    <h4 class="text-xl font-bold mb-2">Despondency</h4>
+                    <p class="text-secondary text-sm">Grief, pity, and confusion. This negative state must be overcome. It decreases as your clarity and equanimity rise.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interactive Scenario Section -->
+        <section id="game-container" class="bg-secondary p-6 sm:p-10 rounded-lg shadow-lg">
+            <h3 class="text-3xl font-bold text-center mb-4">Your Journey: Dilemma <span id="current-dilemma-number">1</span> of 10</h3>
+            <p class="text-center text-secondary mb-8 max-w-3xl mx-auto" id="dilemma-title"></p>
+            
+            <div id="scene-setup" class="bg-primary p-6 rounded-lg border border-accent mb-6">
+                <p id="scene-description" class="italic text-secondary mb-4"></p>
+                <p class="font-bold text-primary">Krishna addresses you:</p>
+                <p id="krishna-prompt" class="italic text-secondary"></p>
+            </div>
+
+            <div id="player-choices" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Choices will be dynamically added here -->
+            </div>
+
+            <div id="consequences-section" class="mt-8 hidden">
+                <div id="krishna-feedback" class="bg-primary p-6 rounded-lg border border-accent mb-6">
+                    <p class="font-bold text-primary">Krishna responds:</p>
+                    <p id="feedback-text" class="italic text-secondary"></p>
+                </div>
+                <div>
+                    <h4 class="text-xl font-bold text-center mb-4">Arjuna's Current Internal State</h4>
+                    <div class="chart-container">
+                        <canvas id="statsChart"></canvas>
+                    </div>
+                </div>
+                <div class="text-center mt-8">
+                    <button id="next-button" class="btn bg-accent text-white font-bold py-2 px-6 rounded-lg"></button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Final Rating Section -->
+        <section id="final-rating-section" class="mt-16 hidden">
+            <h3 class="text-3xl font-bold text-center mb-4">Your Journey's End: Final Rating</h3>
+            <p class="text-center text-secondary mb-8 max-w-3xl mx-auto">Based on your choices throughout the 10 dilemmas, here is your final rating and its potential societal impact.</p>
+            
+            <div class="bg-secondary p-8 rounded-lg shadow-lg text-center">
+                <p class="text-6xl font-bold text-accent mb-4"><span id="final-score"></span>/10</p>
+                <h4 class="text-2xl font-bold text-primary mb-4" id="final-rating-title"></h4>
+                <p class="text-lg text-secondary mb-6" id="final-rating-description"></p>
+                <button id="restart-button" class="btn bg-accent text-white font-bold py-2 px-6 rounded-lg">Restart Journey</button>
+            </div>
+        </section>
+
+        <!-- Gameplay Loop & Endings Section -->
+        <section id="endings-info" class="mt-16">
+            <h3 class="text-3xl font-bold text-center mb-4">Possible Endings</h3>
+            <p class="text-center text-secondary mb-10 max-w-2xl mx-auto">The game's narrative culminates in one of three endings, reflecting the cumulative impact of your choices on Arjuna's spiritual and societal journey.</p>
+
+            <div>
+                <div class="border-b border-gray-200">
+                    <nav class="-mb-px flex justify-center space-x-8" aria-label="Tabs">
+                        <button class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm tab-active" data-tab="ending1">The Enlightened Warrior</button>
+                        <button class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm tab-inactive" data-tab="ending2">The Dutiful Warrior</button>
+                        <button class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm tab-inactive" data-tab="ending3">The Reluctant Combatant</button>
+                    </nav>
+                </div>
+                <div class="py-6">
+                    <div id="ending1" class="tab-content">
+                        <h4 class="text-xl font-bold text-accent mb-2">Best Ending: High Societal Impact</h4>
+                        <p class="text-secondary">Achieved with high Dharma, Equanimity, and Clarity. Arjuna, fully understanding Krishna's teachings, fights with unwavering resolve, free from attachment, grief, or fear. He embodies the ideal Karma Yogi. His final words reflect this state: "My delusion is gone... I am now firm and free from doubt. I shall act according to Your instruction." This path leads to a society where righteous governance flourishes, peace prevails, and individuals are inspired to live with purpose and wisdom.</p>
+                    </div>
+                    <div id="ending2" class="tab-content hidden">
+                        <h4 class="text-xl font-bold text-accent mb-2">Neutral Ending: Mixed Societal Impact</h4>
+                        <p class="text-secondary">Achieved with moderate stats. Arjuna fights, but still carries some emotional weight or intellectual doubts. He performs his duty, but not with the complete inner freedom Krishna intended. The outcome is a reminder that the path to complete liberation is a continuous journey: "Arjuna fought valiantly, fulfilling his duty. Yet, the echoes of his initial despair lingered." Society achieves stability, but the deeper spiritual inspiration for its citizens remains somewhat limited, leading to ongoing challenges and a slower path to true harmony.</p>
+                    </div>
+                    <div id="ending3" class="tab-content hidden">
+                        <h4 class="text-xl font-bold text-accent mb-2">Less Favorable Ending: Negative Societal Impact</h4>
+                        <p class="text-secondary">Results from low stats across the board. Arjuna fights out of obligation or fear of infamy, rather than true understanding. His heart remains heavy, and the spiritual lessons have not fully taken root. The outcome is a hollow victory: "Arjuna, though he took up his arms, fought with a heavy heart, never fully grasping the profound wisdom offered. The war was won, but the inner battle for peace remained unconquered." In this scenario, despite a military victory, society may suffer from a lack of true leadership, continued internal strife, and a decline in moral values, as the leader himself remains unaligned with higher principles.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const dilemmas = [
+                {
+                    title: "Dilemma 1: The Grief of Kinsmen",
+                    sceneDescription: "The conch shells have sounded, signaling the dawn of the greatest war. Your magnificent chariot, guided by Lord Krishna Himself, stands poised between the two mighty armies. As your gaze sweeps across the ranks, your heart clenches. There, arrayed against you, are your revered grandfather Bhishma, your beloved teacher Dronacharya, your cousins, uncles, and friends... A profound despair washes over you, chilling you to the bone.",
+                    krishnaPrompt: "Arjuna, from where has this delusion come upon you at this crucial hour? It is not befitting an Arya, nor does it lead to heaven; it brings only infamy.",
+                    choices: [
+                        {
+                            text: "Krishna, I cannot fight. I see no good in killing my own family. I would rather live by begging.",
+                            tone: "Utter refusal, driven by grief and perceived sin.",
+                            feedback: "Arjuna, you speak words of wisdom, yet you grieve for those who should not be grieved for. The wise lament neither for the living nor for the dead.",
+                            statChanges: { Dharma: -20, Equanimity: -10, Clarity: -5, Despondency: 15 },
+                            scoreContribution: -5
+                        },
+                        {
+                            text: "My mind is confused about my duty. I am Your disciple, please instruct me decisively what is best for me.",
+                            tone: "Expressing profound doubt, seeking guidance, surrendering to Krishna's wisdom.",
+                            feedback: "You have approached Me with a sincere heart, Arjuna. Indeed, your confusion stems from a lack of true knowledge. Now, hear from Me the truth about what is truly best, that your heart may be freed from this weakness.",
+                            statChanges: { Dharma: 5, Equanimity: 5, Clarity: 10, Despondency: -10 },
+                            scoreContribution: 4
+                        },
+                        {
+                            text: "Perhaps we should try for peace one last time, even now. This war feels wrong, and the consequences will be devastating for all.",
+                            tone: "Seeking an alternative, clinging to a hope for non-violence.",
+                            feedback: "The time for peace has long passed, Arjuna. Many attempts were made. Now, Dharma demands action. To shrink from this battle is not the path of a righteous warrior, and it will only lead to greater chaos.",
+                            statChanges: { Dharma: -15, Equanimity: -5, Clarity: -5, Despondency: 10 },
+                            scoreContribution: -3
+                        },
+                        {
+                            text: "I am a Kshatriya, a warrior. It is my duty to fight. But the sight of them... it sickens me. Help me find the strength to overcome this weakness.",
+                            tone: "Acknowledging duty but struggling emotionally, seeking inner fortitude.",
+                            feedback: "Indeed, Arjuna. You recognize your duty, yet your heart is troubled. This weakness of heart is not worthy of you. Now, let Me reveal to you the true nature of action and the Self, that your heart may be freed from this weakness.",
+                            statChanges: { Dharma: 10, Equanimity: 0, Clarity: 5, Despondency: -5 },
+                            scoreContribution: 2
+                        }
+                    ]
+                },
+                {
+                    title: "Dilemma 2: The Eternal Nature of the Soul",
+                    sceneDescription: "Krishna has begun to explain the imperishable nature of the soul. He describes how the soul is never born nor dies, and how bodies are merely like worn-out garments the soul discards.",
+                    krishnaPrompt: "Just as the embodied soul continuously passes from childhood to youth to old age, so also at the time of death, the soul passes into another body. The wise are not deluded by this.",
+                    choices: [
+                        {
+                            text: "But Krishna, if the soul is eternal, why do I still feel this pain? Killing them still feels wrong.",
+                            tone: "Expressing lingering emotional attachment despite intellectual understanding.",
+                            feedback: "Your pain stems from attachment to the perishable body, Arjuna. Learn to tolerate the transient appearances of happiness and distress, for they are like the changing seasons.",
+                            statChanges: { Dharma: 0, Equanimity: -5, Clarity: 5, Despondency: 5 },
+                            scoreContribution: 0
+                        },
+                        {
+                            text: "So, death is an illusion, in a way? This changes everything. What then, is my true purpose here?",
+                            tone: "Demonstrating intellectual understanding and seeking deeper meaning.",
+                            feedback: "Indeed, Arjuna. Knowing this, your true purpose is to perform your prescribed duty without attachment to the fruits of action. Such equanimity is called Yoga.",
+                            statChanges: { Dharma: 5, Equanimity: 5, Clarity: 10, Despondency: -5 },
+                            scoreContribution: 4
+                        },
+                        {
+                            text: "This is too abstract. How does this apply to fighting these men?",
+                            tone: "Practical, skeptical, struggling to connect philosophy to action.",
+                            feedback: "This knowledge is the foundation, Arjuna. Without understanding the eternal nature of the self, you will remain bound by material dualities. Focus your mind on this truth.",
+                            statChanges: { Dharma: -5, Equanimity: 0, Clarity: -5, Despondency: 5 },
+                            scoreContribution: -2
+                        }
+                    ]
+                },
+                {
+                    title: "Dilemma 3: The Path of Karma Yoga",
+                    sceneDescription: "Krishna has explained that action is inevitable and that one should perform duty without attachment to results. He emphasizes that equanimity in success and failure is true Yoga.",
+                    krishnaPrompt: "You have a right to perform your prescribed duty, but you are not entitled to the fruits of action. Never consider yourself the cause of the results of your activities, and never be attached to not performing your duty.",
+                    choices: [
+                        {
+                            text: "So, I should fight, but not care if I win or lose? That seems impossible for a warrior.",
+                            tone: "Expressing difficulty in applying the teaching, clinging to conventional warrior ethos.",
+                            feedback: "It is not impossible, Arjuna. Fix your mind on your duty, not on the outcome. By doing so, you will transcend the bondage of action.",
+                            statChanges: { Dharma: 5, Equanimity: 0, Clarity: 5, Despondency: 0 },
+                            scoreContribution: 2
+                        },
+                        {
+                            text: "I understand. My focus should be on the action itself, not the outcome. This brings clarity.",
+                            tone: "Demonstrating intellectual grasp and acceptance of the principle.",
+                            feedback: "Excellent, Arjuna. One who acts without attachment to the fruits of action is truly enlightened. Such a person is freed from the cycle of birth and death.",
+                            statChanges: { Dharma: 10, Equanimity: 10, Clarity: 10, Despondency: -5 },
+                            scoreContribution: 5
+                        },
+                        {
+                            text: "But if I don't care about the results, won't my actions become weak or ineffective?",
+                            tone: "Seeking further clarification, practical concern about effectiveness.",
+                            feedback: "On the contrary, Arjuna. When you are unconcerned about results, you can focus entirely on your efforts, and your action becomes even more perfect. This is the secret of effective action.",
+                            statChanges: { Dharma: 5, Equanimity: 5, Clarity: 5, Despondency: 0 },
+                            scoreContribution: 3
+                        }
+                    ]
+                },
+                {
+                    title: "Dilemma 4: The Steadfast Intellect (Sthita-prajna)",
+                    sceneDescription: "Krishna describes the characteristics of a person of steady wisdom – one who is completely free from desires and satisfied in the Self alone.",
+                    krishnaPrompt: "When a person is completely free from all desires of the mind, O Partha, and is satisfied in the Self alone by the Self, then one is said to be of steady wisdom.",
+                    choices: [
+                        {
+                            text: "How can one truly give up all desires? Is it not natural for humans to desire?",
+                            tone: "Questioning the feasibility of complete desirelessness.",
+                            feedback: "Desires arise from contact with sense objects, Arjuna. By withdrawing the senses from their objects, like a tortoise withdrawing its limbs, one's wisdom becomes steady.",
+                            statChanges: { Dharma: 0, Equanimity: 5, Clarity: 5, Despondency: 0 },
+                            scoreContribution: 2
+                        },
+                        {
+                            text: "To be satisfied in the Self alone... this is the highest state. I must strive for this inner contentment.",
+                            tone: "Aspiring for the state of steady wisdom, showing deep understanding.",
+                            feedback: "Indeed, Arjuna. Such a person attains peace, for they are not disturbed by the incessant flow of desires, just as the ocean remains undisturbed by the rivers flowing into it.",
+                            statChanges: { Dharma: 5, Equanimity: 10, Clarity: 10, Despondency: -5 },
+                            scoreContribution: 5
+                        },
+                        {
+                            text: "This seems too difficult, almost impossible for a man engaged in battle.",
+                            tone: "Feeling overwhelmed by the ideal, doubting personal capacity.",
+                            feedback: "Do not despair, Arjuna. Even a little practice of this Dharma protects one from great fear. Steadiness comes through continuous effort and detachment.",
+                            statChanges: { Dharma: 0, Equanimity: -5, Clarity: 0, Despondency: 5 },
+                            scoreContribution: -1
+                        }
+                    ]
+                },
+                {
+                    title: "Dilemma 5: Mind as Friend or Enemy",
+                    sceneDescription: "Krishna emphasizes the critical role of the mind in one's spiritual journey, stating it can be either a friend or an enemy.",
+                    krishnaPrompt: "Elevate yourself through the power of your mind, and not degrade yourself, for the mind can be the friend and also the enemy of the self.",
+                    choices: [
+                        {
+                            text: "How can I make my mind my friend? It seems so restless and uncontrollable.",
+                            tone: "Seeking practical methods for mind control.",
+                            feedback: "By practice and by detachment, Arjuna, the mind can be controlled. It is undoubtedly difficult, but achievable.",
+                            statChanges: { Dharma: 5, Equanimity: 5, Clarity: 5, Despondency: -5 },
+                            scoreContribution: 3
+                        },
+                        {
+                            text: "I see now. My own thoughts and attachments are the true enemies, not those on the battlefield.",
+                            tone: "Profound realization, shifting focus to internal struggles.",
+                            feedback: "You speak truly, Arjuna. For one who has conquered his mind, the mind is the best of friends; but for one who has failed to do so, the mind remains the greatest enemy.",
+                            statChanges: { Dharma: 10, Equanimity: 10, Clarity: 10, Despondency: -10 },
+                            scoreContribution: 5
+                        },
+                        {
+                            text: "My mind is too strong for me to control. I am destined to be its slave.",
+                            tone: "Feeling helpless and resigned to the mind's dominance.",
+                            feedback: "Never lose hope, Arjuna. Even the most restless mind can be controlled with persistent effort and proper guidance. Do not surrender to weakness.",
+                            statChanges: { Dharma: -5, Equanimity: -10, Clarity: -5, Despondency: 10 },
+                            scoreContribution: -4
+                        }
+                    ]
+                },
+                {
+                    title: "Dilemma 6: The Path of Devotion (Bhakti Yoga)",
+                    sceneDescription: "Krishna begins to reveal His supreme nature, suggesting that devotion to Him is a powerful path to liberation.",
+                    krishnaPrompt: "Fix your mind on Me, be devoted to Me, worship Me, and offer obeisance to Me. Being completely absorbed in Me, surely you will come to Me.",
+                    choices: [
+                        {
+                            text: "How can I fix my mind on You amidst this chaos? What does true devotion entail?",
+                            tone: "Seeking practical application of devotion in a challenging environment.",
+                            feedback: "By performing all your actions for My sake, Arjuna, and remembering Me in all circumstances, your mind will become fixed on Me. This is the essence of true devotion.",
+                            statChanges: { Dharma: 5, Equanimity: 5, Clarity: 5, Despondency: -5 },
+                            scoreContribution: 3
+                        },
+                        {
+                            text: "To surrender completely to You... this is the highest knowledge. My heart yearns for this path.",
+                            tone: "Embracing the path of devotion with sincerity and aspiration.",
+                            feedback: "You are very dear to Me, Arjuna. Those who fix their minds on Me with unwavering faith and are always engaged in My devotion, I consider them to be the most perfect in Yoga.",
+                            statChanges: { Dharma: 10, Equanimity: 10, Clarity: 10, Despondency: -10 },
+                            scoreContribution: 5
+                        },
+                        {
+                            text: "Is devotion enough, or must I also perform all these difficult actions?",
+                            tone: "Questioning the necessity of action if devotion is sufficient.",
+                            feedback: "Both are essential, Arjuna. Perform your duty with devotion, offering all actions to Me. This path liberates you from the bondage of karma.",
+                            statChanges: { Dharma: 0, Equanimity: 0, Clarity: 0, Despondency: 0 },
+                            scoreContribution: 1
+                        }
+                    ]
+                },
+                {
+                    title: "Dilemma 7: Understanding the Field and the Knower",
+                    sceneDescription: "Krishna explains the distinction between the body (the field of activities) and the soul (the knower of the field), and the nature of true knowledge.",
+                    krishnaPrompt: "This body, O son of Kunti, is called the field, and one who knows this body is called the knower of the field by the learned.",
+                    choices: [
+                        {
+                            text: "So, I am not this body, nor my emotions, but the conscious observer within it?",
+                            tone: "Seeking confirmation of the core philosophical distinction.",
+                            feedback: "Precisely, Arjuna. The true knowledge is to understand this distinction between the field and the knower of the field, and to realize the Supreme Soul within all beings.",
+                            statChanges: { Dharma: 5, Equanimity: 5, Clarity: 10, Despondency: -5 },
+                            scoreContribution: 4
+                        },
+                        {
+                            text: "This is too subtle for me to grasp fully amidst the clamor of war.",
+                            tone: "Struggling with the abstract nature of the teaching in a practical context.",
+                            feedback: "Even in the midst of battle, the truth can be perceived by a concentrated mind. Continuous effort in meditation and reflection will reveal it.",
+                            statChanges: { Dharma: 0, Equanimity: -5, Clarity: -5, Despondency: 5 },
+                            scoreContribution: -2
+                        },
+                        {
+                            text: "If I am not the body, then why should I care about its actions or its fate in this war?",
+                            tone: "Misinterpreting the teaching as an excuse for apathy or inaction.",
+                            feedback: "Though you are not the body, Arjuna, you are embodied. Your actions in this world, performed as duty and without attachment, are essential for the welfare of the world and your own purification.",
+                            statChanges: { Dharma: -10, Equanimity: -5, Clarity: -10, Despondency: 10 },
+                            scoreContribution: -5
+                        }
+                    ]
+                },
+                {
+                    title: "Dilemma 8: Transcending the Three Modes",
+                    sceneDescription: "Krishna explains how the three modes of material nature (goodness, passion, ignorance) bind the embodied soul and how one can transcend them.",
+                    krishnaPrompt: "Goodness, passion, and ignorance—these qualities born of material nature bind the embodied soul, O mighty-armed one, in the body.",
+                    choices: [
+                        {
+                            text: "How can I identify which mode is influencing my thoughts and actions?",
+                            tone: "Seeking practical discernment to understand internal influences.",
+                            feedback: "When the light of knowledge shines through all the gates of the body, then it is understood that the mode of goodness is prevalent. Greed, activity, and restlessness indicate passion; delusion, inertia, and madness indicate ignorance.",
+                            statChanges: { Dharma: 5, Equanimity: 5, Clarity: 10, Despondency: -5 },
+                            scoreContribution: 4
+                        },
+                        {
+                            text: "To be free from these modes seems like true liberation. How can I achieve that state?",
+                            tone: "Aspiring for freedom from material qualities, seeking the path to transcendence.",
+                            feedback: "One who serves Me with unswerving devotion, transcending all three modes of nature, becomes eligible for the state of Brahman.",
+                            statChanges: { Dharma: 10, Equanimity: 10, Clarity: 10, Despondency: -10 },
+                            scoreContribution: 5
+                        },
+                        {
+                            text: "Are these modes inescapable? Am I forever bound by them?",
+                            tone: "Feeling fatalistic, doubting the possibility of transcendence.",
+                            feedback: "No, Arjuna. Though difficult to overcome, those who surrender unto Me can easily cross beyond these modes. Do not lose hope.",
+                            statChanges: { Dharma: -5, Equanimity: -5, Clarity: -5, Despondency: 10 },
+                            scoreContribution: -3
+                        }
+                    ]
+                },
+                {
+                    title: "Dilemma 9: Understanding the Supreme Person",
+                    sceneDescription: "Krishna reveals His nature as the Purushottama, the Supreme Person, who is beyond both the perishable material world and the imperishable individual soul.",
+                    krishnaPrompt: "I am transcendental, beyond both the fallible and the infallible. Therefore, I am celebrated in the world and in the Vedas as the Supreme Person.",
+                    choices: [
+                        {
+                            text: "To know You as the Supreme Person, beyond all, is the ultimate knowledge. My mind is filled with awe.",
+                            tone: "Expressing profound realization and reverence for the Supreme Truth.",
+                            feedback: "One who knows Me as the Supreme Person, without doubt, is the knower of everything, and engages in My devotion with all his heart, O Bharata.",
+                            statChanges: { Dharma: 10, Equanimity: 10, Clarity: 15, Despondency: -10 },
+                            scoreContribution: 5
+                        },
+                        {
+                            text: "How can I, a mere mortal, truly comprehend such a vast and supreme being?",
+                            tone: "Feeling small and overwhelmed by the magnitude of the divine.",
+                            feedback: "By devotion alone, Arjuna, can I be known in truth, seen, and entered into. Through sincere devotion, I reveal Myself.",
+                            statChanges: { Dharma: 5, Equanimity: 5, Clarity: 5, Despondency: -5 },
+                            scoreContribution: 3
+                        },
+                        {
+                            text: "Is this not just another philosophical concept? How does it help me fight this war?",
+                            tone: "Dismissing the profound truth as impractical or irrelevant to the immediate task.",
+                            feedback: "Understanding My supreme nature provides the ultimate motivation and detachment for all actions, including this war. It frees you from all fear and doubt.",
+                            statChanges: { Dharma: -5, Equanimity: -5, Clarity: -10, Despondency: 10 },
+                            scoreContribution: -4
+                        }
+                    ]
+                },
+                {
+                    title: "Dilemma 10: The Final Call to Surrender",
+                    sceneDescription: "Krishna has delivered the essence of the Bhagavad Gita, concluding with the most confidential knowledge – the instruction to surrender completely to Him.",
+                    krishnaPrompt: "Abandon all varieties of dharma and simply surrender unto Me. I shall liberate you from all sinful reactions; do not fear.",
+                    choices: [
+                        {
+                            text: "My delusion is gone, and I have regained my memory through Your grace. I am now firm and free from doubt. I shall act according to Your instruction.",
+                            tone: "Complete surrender and resolve, accepting Krishna's final guidance.",
+                            feedback: "Excellent, Arjuna! Your heart is now clear, and your purpose firm. Go forth and fulfill your destiny.",
+                            statChanges: { Dharma: 15, Equanimity: 15, Clarity: 15, Despondency: -20 },
+                            scoreContribution: 5
+                        },
+                        {
+                            text: "To abandon all duties and just surrender... is that truly the path of righteousness?",
+                            tone: "Hesitation, seeking clarification on the meaning of 'abandon all dharmas'.",
+                            feedback: "It means to abandon all conceptions of duty that bind you to material desires, and to act solely for My sake. This is the highest dharma.",
+                            statChanges: { Dharma: 5, Equanimity: 5, Clarity: 5, Despondency: 0 },
+                            scoreContribution: 2
+                        },
+                        {
+                            text: "I still feel a conflict within. Is there no other way?",
+                            tone: "Lingering doubt and internal struggle, unable to fully commit.",
+                            feedback: "This is the most confidential knowledge, Arjuna. Reflect upon it, and then do as you wish. But know that this path leads to ultimate liberation.",
+                            statChanges: { Dharma: -5, Equanimity: -10, Clarity: -5, Despondency: 15 },
+                            scoreContribution: -3
+                        }
+                    ]
+                }
+            ];
+
+            let currentStep = 0;
+            let totalScore = 0;
+            let currentStats = { Dharma: 0, Equanimity: 0, Clarity: 0, Despondency: 0 };
+            let statsChart = null;
+
+            const dilemmaNumberSpan = document.getElementById('current-dilemma-number');
+            const dilemmaTitle = document.getElementById('dilemma-title');
+            const sceneDescription = document.getElementById('scene-description');
+            const krishnaPrompt = document.getElementById('krishna-prompt');
+            const choicesContainer = document.getElementById('player-choices');
+            const consequencesSection = document.getElementById('consequences-section');
+            const feedbackText = document.getElementById('feedback-text');
+            const nextButton = document.getElementById('next-button');
+            const gameContainer = document.getElementById('game-container');
+            const finalRatingSection = document.getElementById('final-rating-section');
+            const finalScoreDisplay = document.getElementById('final-score');
+            const finalRatingTitle = document.getElementById('final-rating-title');
+            const finalRatingDescription = document.getElementById('final-rating-description');
+            const restartButton = document.getElementById('restart-button');
+            const endingsInfoSection = document.getElementById('endings-info');
+
+            function updateBackground() {
+                // Calculate lightness based on totalScore for background color
+                const minScoreForColor = -50;
+                const maxScoreForColor = 50;
+                const normalizedScore = (totalScore - minScoreForColor) / (maxScoreForColor - minScoreForColor); // 0 to 1
+                const lightness = 20 + (normalizedScore * 60); // Scale lightness from 20% (dark) to 80% (bright)
+                document.body.style.backgroundColor = `hsl(30, 20%, ${lightness}%)`;
+            }
+
+            function setDilemmaBackground(stepIndex) {
+                // Construct the image URL based on the current dilemma number
+                const imageUrl = `/img/img${stepIndex + 1}.jpg`;
+                // Set the background image for the body
+                document.body.style.backgroundImage = `url('${imageUrl}')`;
+            }
+
+            function initializeGame() {
+                currentStep = 0;
+                totalScore = 0;
+                currentStats = { Dharma: 0, Equanimity: 0, Clarity: 0, Despondency: 0 };
+                gameContainer.classList.remove('hidden');
+                finalRatingSection.classList.add('hidden');
+                endingsInfoSection.classList.remove('hidden'); // Ensure endings info is visible
+                updateBackground();
+                renderDilemma(currentStep);
+            }
+
+            function renderDilemma(stepIndex) {
+                const dilemma = dilemmas[stepIndex];
+                dilemmaNumberSpan.textContent = stepIndex + 1;
+                dilemmaTitle.textContent = dilemma.title;
+                sceneDescription.textContent = dilemma.sceneDescription;
+                krishnaPrompt.textContent = dilemma.krishnaPrompt;
+
+                choicesContainer.innerHTML = '';
+                dilemma.choices.forEach((choice, index) => {
+                    const button = document.createElement('button');
+                    button.classList.add('btn', 'bg-primary', 'text-left', 'p-4', 'rounded-lg', 'border', 'border-gray-300', 'hover:border-accent', 'hover:bg-secondary');
+                    button.innerHTML = `
+                        <p class="font-semibold text-primary">${choice.text}</p>
+                        <p class="text-sm text-secondary italic mt-1">${choice.tone}</p>
+                    `;
+                    button.addEventListener('click', () => selectChoice(index));
+                    choicesContainer.appendChild(button);
+                });
+
+                choicesContainer.classList.remove('hidden');
+                consequencesSection.classList.add('hidden');
+                
+                // Call function to set the background image for the current dilemma
+                setDilemmaBackground(stepIndex); 
+            }
+
+            function selectChoice(choiceIndex) {
+                const dilemma = dilemmas[currentStep];
+                const selectedChoice = dilemma.choices[choiceIndex];
+                
+                // Apply stat changes
+                currentStats.Dharma += selectedChoice.statChanges.Dharma;
+                currentStats.Equanimity += selectedChoice.statChanges.Equanimity;
+                currentStats.Clarity += selectedChoice.statChanges.Clarity;
+                currentStats.Despondency += selectedChoice.statChanges.Despondency;
+                totalScore += selectedChoice.scoreContribution;
+
+                // Update UI
+                feedbackText.textContent = selectedChoice.feedback;
+                choicesContainer.classList.add('hidden');
+                consequencesSection.classList.remove('hidden');
+                
+                renderChart(currentStats);
+                updateBackground(); // Update background color based on cumulative score
+
+                if (currentStep < dilemmas.length - 1) {
+                    nextButton.textContent = 'Next Dilemma';
+                    nextButton.onclick = nextDilemma;
+                } else {
+                    nextButton.textContent = 'View Final Rating';
+                    nextButton.onclick = showFinalRating;
+                }
+            }
+
+            function renderChart(stats) {
+                const ctx = document.getElementById('statsChart').getContext('2d');
+                const data = {
+                    labels: ['Dharma', 'Equanimity', 'Clarity', 'Despondency'],
+                    datasets: [{
+                        label: 'Current State',
+                        data: [stats.Dharma, stats.Equanimity, stats.Clarity, stats.Despondency],
+                        backgroundColor: [
+                            'rgba(75, 192, 192, 0.6)', // Dharma (Greenish-Cyan)
+                            'rgba(255, 206, 86, 0.6)', // Equanimity (Yellow)
+                            'rgba(153, 102, 255, 0.6)', // Clarity (Purple)
+                            'rgba(255, 99, 132, 0.6)'  // Despondency (Red)
+                        ],
+                        borderColor: [
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(255, 99, 132, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                };
+
+                if (statsChart) {
+                    statsChart.destroy();
+                }
+
+                statsChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: data,
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                suggestedMin: -100, // Adjusted range for cumulative stats
+                                suggestedMax: 100,
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed.x !== null) {
+                                            label += context.parsed.x;
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            function nextDilemma() {
+                currentStep++;
+                renderDilemma(currentStep);
+            }
+
+            function showFinalRating() {
+                gameContainer.classList.add('hidden');
+                endingsInfoSection.classList.add('hidden'); // Hide endings info when showing final rating
+                finalRatingSection.classList.remove('hidden');
+
+                const scaledScore = Math.max(-10, Math.min(10, Math.round(totalScore / 5))); // Scale -50 to 50 to -10 to 10
+
+                finalScoreDisplay.textContent = scaledScore;
+
+                if (scaledScore >= 5) {
+                    finalRatingTitle.textContent = "The Enlightened Warrior";
+                    finalRatingDescription.textContent = "Your choices reflect deep wisdom and unwavering adherence to Dharma. Your leadership inspires a society of righteous governance, peace, and purposeful living. Your impact on society is profoundly positive, fostering harmony and spiritual growth for all.";
+                } else if (scaledScore >= -4) {
+                    finalRatingTitle.textContent = "The Dutiful Warrior";
+                    finalRatingDescription.textContent = "You navigated the dilemmas with a mix of understanding and lingering human struggles. While you fulfilled your duty, the path to complete inner freedom remains. Society achieves stability, but the deeper spiritual inspiration for its citizens remains somewhat limited, leading to ongoing challenges and a slower path to true harmony.";
+                } else {
+                    finalRatingTitle.textContent = "The Reluctant Combatant";
+                    finalRatingDescription.textContent = "Your journey was marked by significant doubt and emotional turmoil. While the war may have been fought, the inner battle for peace and clarity was largely unconquered. Despite a potential military victory, society may suffer from a lack of true leadership, continued internal strife, and a decline in moral values, as your actions were not fully aligned with higher principles.";
+                }
+            }
+
+            restartButton.addEventListener('click', initializeGame);
+
+            // Tabs for Endings Info
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const tabId = button.dataset.tab;
+
+                    tabButtons.forEach(btn => {
+                        btn.classList.remove('tab-active');
+                        btn.classList.add('tab-inactive');
+                    });
+                    button.classList.add('tab-active');
+                    button.classList.remove('tab-inactive');
+
+                    tabContents.forEach(content => {
+                        if (content.id === tabId) {
+                            content.classList.remove('hidden');
+                        } else {
+                            content.classList.add('hidden');
+                        }
+                    });
+                });
+            });
+
+            initializeGame(); // Start the game on load
+        });
+    </script>
+</body>
+</html>
